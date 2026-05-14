@@ -74,6 +74,7 @@ public final class MessagesBridge {
             String model = req.path("model").asText("lite");
             JsonNode messages = req.path("messages");
             String systemPrompt = req.path("system").asText("");
+            int maxTokens = req.path("max_tokens").asInt(32768);
 
             // Build upstream request body
             ObjectNode body = templateBase.deepCopy();
@@ -89,6 +90,10 @@ public final class MessagesBridge {
             ObjectNode biz = (ObjectNode) body.path("business");
             biz.put("id", UUID.randomUUID().toString());
             biz.put("begin_at", System.currentTimeMillis());
+
+            // Apply max_tokens from request to upstream
+            ObjectNode params = (ObjectNode) body.path("parameters");
+            params.put("max_tokens", maxTokens);
 
             // Extract last user message as prompt
             String prompt = "";
