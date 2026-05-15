@@ -14,6 +14,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public final class MessagesBridge {
 
@@ -73,7 +74,12 @@ public final class MessagesBridge {
             boolean stream = req.path("stream").asBoolean(false);
             String model = req.path("model").asText("lite");
             JsonNode messages = req.path("messages");
-            String systemPrompt = req.path("system").asText("");
+            String systemPrompt = req.path("system")
+                    .findValues("text")
+                    .stream()
+                    .map(JsonNode::asText)
+                    .filter(s -> !s.startsWith("x-anthropic-billing-header") && !s.startsWith("You are Claude Code"))
+                    .collect(Collectors.joining("\n"));
             int maxTokens = req.path("max_tokens").asInt(32768);
 
             // Build upstream request body
@@ -94,6 +100,18 @@ public final class MessagesBridge {
             // Apply max_tokens from request to upstream
             ObjectNode params = (ObjectNode) body.path("parameters");
             params.put("max_tokens", maxTokens);
+
+            // Apply tools from request to upstream
+            JsonNode tools = req.path("tools");
+            if (tools.isArray() && !tools.isEmpty()) {
+                body.set("tools", tools.deepCopy());
+            }
+
+            // Apply tool_choice from request to upstream, wait to check
+            JsonNode toolChoice = req.path("tool_choice");
+            if (!toolChoice.isMissingNode()) {
+                body.set("tool_choice", toolChoice.deepCopy());
+            }
 
             // Extract last user message as prompt
             String prompt = "";
