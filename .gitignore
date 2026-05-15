@@ -1,3 +1,6 @@
+# Materials directory (runtime data)
+materials/
+
 # Compiled class file
 *.class
 
